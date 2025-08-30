@@ -27,7 +27,10 @@ dependencies = [
     "openai>=1.0.0",
     "pydantic-ai",
     "python-dotenv",
-]
+    "logfire",
+    "langchain_google_community",
+    "googlemaps",
+    "load_dotenv",]
 
 [project.urls]
 Homepage = "https://github.com/yourusername/travel-agent"

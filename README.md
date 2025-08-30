@@ -43,12 +43,21 @@ GOOGLE_API_KEY=your-google-api-key-here
 
 ## Usage
 
+### Command Line Interface
+
+```bash
+python run_agent.py --query "what is my current location" --model openai:gpt-4o --env .env
+```
+
 ### Basic Usage
 
 ```python
 from agent import TravelAgent
+from load_dotenv import load_dotenv
+
 
 # Create a travel agent instance
+load_dotenv()  # Load environment variables from .env file
 agent = TravelAgent()
 
 # Ask a travel question

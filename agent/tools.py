@@ -1,28 +1,41 @@
+# NOTE: This file is no longer needed with the updated agent.py
+# All tools are now registered directly in agent.py using @agent.tool_plain decorators
+# This file is kept for reference only
+
 import os
 import googlemaps
 import requests
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 from langchain_google_community import GoogleSearchAPIWrapper
-from pydantic_ai import RunContext
-from agent.agent import agent
+from pydantic_ai import RunContext, Agent
 
-gmaps = googlemaps.Client(key=os.environ["GOOGLE_CLIENT_API_KEY"])
+# This approach is DEPRECATED in favor of direct tool registration in agent.py
+# The new approach prevents tool name conflicts and follows latest pydantic_ai patterns
+
+def register_tools(agent: Agent):
+    """
+    DEPRECATED: Tool registration function.
+    
+    This approach can cause tool name conflicts. Use the new approach in agent.py instead
+    where tools are registered directly using @agent.tool_plain decorators.
+    """
+    print("WARNING: register_tools() is deprecated. Tools are now registered directly in agent.py")
+    print("This function call will be ignored to prevent tool conflicts.")
+    
+    # Do nothing to prevent conflicts with the new decorator-based approach
+    pass
+
+# Legacy tool functions - these are now implemented as decorators in agent.py
+# Keeping for reference only
+
+gmaps = googlemaps.Client(key=os.environ.get("GOOGLE_CLIENT_API_KEY", ""))
 search_client = GoogleSearchAPIWrapper()
 
-
-@agent.tool
-def get_places(ctx: RunContext, query: str, location: Optional[str] = None, radius: int = 5000) -> List[Dict[str, Any]]:
+def legacy_get_places(ctx: RunContext, query: str, location: Optional[str] = None, radius: int = 5000) -> List[Dict[str, Any]]:
     """
-    Search for places of interest using Google Maps Places API.
-    
-    Args:
-        query: Search term (e.g., "restaurants", "museums")
-        location: Optional location to center the search (latitude,longitude)
-        radius: Search radius in meters (default 5000)
-        
-    Returns:
-        List of places matching the search criteria
+    LEGACY: Search for places of interest using Google Maps Places API.
+    This function is replaced by find_places() in agent.py
     """
     if location:
         lat, lng = map(float, location.split(","))
@@ -30,62 +43,34 @@ def get_places(ctx: RunContext, query: str, location: Optional[str] = None, radi
     else:
         return gmaps.places(query=query).get('results', [])
 
-@agent.tool
-def geocode_address(ctx: RunContext, address: str) -> List[Dict[str, Any]]:
+def legacy_geocode_address(ctx: RunContext, address: str) -> List[Dict[str, Any]]:
     """
-    Geocode an address to get coordinates and location details.
-    
-    Args:
-        address: Address to geocode
-        
-    Returns:
-        Geocoding results with coordinates and address components
+    LEGACY: Geocode an address to get coordinates and location details.
+    This function is replaced by geocode_address() in agent.py
     """
     return gmaps.geocode(address)
 
-@agent.tool
-def reverse_geocode_coordinates(ctx: RunContext, latitude: float, longitude: float) -> List[Dict[str, Any]]:
+def legacy_reverse_geocode_coordinates(ctx: RunContext, latitude: float, longitude: float) -> List[Dict[str, Any]]:
     """
-    Reverse geocode coordinates to get address information.
-    
-    Args:
-        latitude: Latitude coordinate
-        longitude: Longitude coordinate
-        
-    Returns:
-        Address information for the coordinates
+    LEGACY: Reverse geocode coordinates to get address information.
+    This function is replaced by reverse_geocode_coordinates() in agent.py
     """
     return gmaps.reverse_geocode((latitude, longitude))
 
-@agent.tool
-def get_directions(ctx: RunContext, origin: str, destination: str, mode: str = "driving") -> List[Dict[str, Any]]:
+def legacy_get_directions(ctx: RunContext, origin: str, destination: str, mode: str = "driving") -> List[Dict[str, Any]]:
     """
-    Get directions between two locations.
-    
-    Args:
-        origin: Starting location
-        destination: Destination location
-        mode: Transportation mode (driving, walking, bicycling, transit)
-        
-    Returns:
-        Directions with route information
+    LEGACY: Get directions between two locations.
+    This function is replaced by get_directions() in agent.py
     """
     return gmaps.directions(origin, destination, mode=mode, departure_time=datetime.now())
 
-@agent.tool
-def get_current_weather(ctx: RunContext, latitude: float, longitude: float) -> Dict[str, Any]:
+def legacy_get_current_weather(ctx: RunContext, latitude: float, longitude: float) -> Dict[str, Any]:
     """
-    Get current weather conditions for given coordinates.
-    
-    Args:
-        latitude: Latitude coordinate
-        longitude: Longitude coordinate
-        
-    Returns:
-        Current weather data including temperature, conditions, etc.
+    LEGACY: Get current weather conditions for given coordinates.
+    This function is replaced by get_current_weather() in agent.py
     """
     params = {
-        "key": os.environ["GOOGLE_API_KEY"],
+        "key": os.environ.get("GOOGLE_API_KEY", ""),
         "location.latitude": latitude,
         "location.longitude": longitude,
     }
@@ -97,22 +82,14 @@ def get_current_weather(ctx: RunContext, latitude: float, longitude: float) -> D
         return response.json()
     else:
         return {"error": f"Weather API error: {response.status_code}"}
-    
-@agent.tool
-def get_weather_forecast(ctx: RunContext, latitude: float, longitude: float, days: int = 7) -> Dict[str, Any]:
+
+def legacy_get_weather_forecast(ctx: RunContext, latitude: float, longitude: float, days: int = 7) -> Dict[str, Any]:
     """
-    Get weather forecast for the next few days.
-    
-    Args:
-        latitude: Latitude coordinate
-        longitude: Longitude coordinate
-        days: Number of days to forecast (default 7)
-        
-    Returns:
-        Weather forecast data
+    LEGACY: Get weather forecast for the next few days.
+    This function is replaced by get_weather_forecast() in agent.py
     """
     params = {
-        "key": os.environ["GOOGLE_API_KEY"],
+        "key": os.environ.get("GOOGLE_API_KEY", ""),
         "location.latitude": latitude,
         "location.longitude": longitude,
         "days": days,
@@ -125,15 +102,11 @@ def get_weather_forecast(ctx: RunContext, latitude: float, longitude: float, day
         return response.json()
     else:
         return {"error": f"Weather API error: {response.status_code}"}
-    
-    
-@agent.tool
-def get_current_location(ctx: RunContext) -> Dict[str, Any]:
+
+def legacy_get_current_location(ctx: RunContext) -> Dict[str, Any]:
     """
-    Get the current location of the user based on IP address.
-    
-    Returns:
-        Current location data including city, region, country, and coordinates
+    LEGACY: Get the current location of the user based on IP address.
+    This function is replaced by get_current_location() in agent.py
     """
     try:
         response = requests.get("https://ipinfo.io/json")
@@ -141,20 +114,15 @@ def get_current_location(ctx: RunContext) -> Dict[str, Any]:
         return response.json()
     except requests.RequestException as e:
         return {"error": f"Could not get current location: {str(e)}"}
-    
-    
-@agent.tool
-def get_current_date_time(ctx: RunContext) -> str:
+
+def legacy_get_current_date_time(ctx: RunContext) -> str:
     """
-    Get the current date and time in ISO format.
-    
-    Returns:
-        Current date and time as a string
+    LEGACY: Get the current date and time in ISO format.
+    This function is replaced by get_current_date_time() in agent.py
     """
     return datetime.now().isoformat()
 
-@agent.tool
-def search_web(ctx: RunContext, query: str, num_results: int = 5) -> List[Dict[str, str]]:
+def legacy_search_web(ctx: RunContext, query: str, num_results: int = 5) -> List[Dict[str, str]]:
     """
     FIXED: Search the web using the stable DDGS library. This avoids the SSLError.
     """
@@ -171,14 +139,8 @@ def search_web(ctx: RunContext, query: str, num_results: int = 5) -> List[Dict[s
 @agent.tool
 def validate_address(ctx: RunContext, addresses: List[str], region_code: str = 'US') -> Dict[str, Any]:
     """
-    Validate addresses using Google Maps Address Validation API.
-    
-    Args:
-        addresses: List of addresses to validate
-        region_code: Region code (default: 'US')
-        
-    Returns:
-        Address validation results
+    LEGACY: Validate addresses using Google Maps Address Validation API.
+    This function is replaced by validate_address() in agent.py
     """
     try:
         return gmaps.addressvalidation(addresses, regionCode=region_code)
