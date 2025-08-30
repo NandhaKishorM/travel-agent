@@ -156,17 +156,18 @@ def get_current_date_time(ctx: RunContext) -> str:
 @agent.tool
 def search_web(ctx: RunContext, query: str, num_results: int = 5) -> List[Dict[str, str]]:
     """
-    Search the web using Google Custom Search.
-    
-    Args:
-        query: Search query
-        num_results: Number of results to return (default 5)
-        
-    Returns:
-        List of search results with title, link, and snippet
+    FIXED: Search the web using the stable DDGS library. This avoids the SSLError.
     """
-    return search_client.results(query, num_results=num_results)
-
+    from ddgs import DDGS
+    try:
+        with DDGS() as ddgs:
+            results = [
+                {"title": r.get('title'), "href": r.get('href'), "body": r.get('body')}
+                for r in ddgs.text(query, max_results=num_results)
+            ]
+        return results
+    except Exception as e:
+        return [{"error": f"Web search failed: {str(e)}"}]
 @agent.tool
 def validate_address(ctx: RunContext, addresses: List[str], region_code: str = 'US') -> Dict[str, Any]:
     """
