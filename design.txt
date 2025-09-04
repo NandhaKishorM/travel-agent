@@ -1,0 +1,594 @@
+# Multi-Agent Travel System Enhancement
+## Product Requirements Document (PRD)
+
+---
+
+### 📋 **Document Information**
+- **Product**: Multi-Agent Travel System Enhancement
+- **Version**: 1.0
+- **Date**: August 2025
+- **Owner**: Nandakishor M
+- **Status**: Draft
+- **Timeline**: 3 Weeks
+- **Priority**: P0 (High Priority)
+
+---
+
+## 🎯 **Executive Summary**
+
+Enhancement of the existing Travel Agent system (app.py) to support multi-agent architecture using PydanticAI's multi-agent patterns. The system will leverage different LLMs for specialized tasks through agent delegation and programmatic hand-off patterns, with trace analysis capabilities added as a secondary feature.
+
+### **Current System Overview**
+- Single `TravelAgent` currently using OpenAI GPT-4o (configurable)
+- Google Maps APIs integration (geocoding, directions, weather, search)
+- Dash-based UI with causal analysis and RoPE embeddings
+- Tool execution tracing and influence chain analysis
+
+### **Enhancement Goals**
+- **Multi-Agent Architecture**: Implement agent delegation patterns
+- **Multi-LLM Support**: Use different models for specialized tasks
+- **Enhanced Analysis**: Leverage multiple AI perspectives
+- **Trace Analysis**: Advanced multi-agent trace analysis capabilities
+
+---
+
+## 🤖 **Multi-Agent Architecture Design**
+
+### **Agent Delegation Pattern Implementation**
+
+**4-LLM Multi-Agent Architecture**: Leverages the strengths of different leading models
+
+```mermaid
+graph TB
+    subgraph "Main Travel Agent (GPT-5)"
+        MAIN[🎯 TravelAgent<br/>GPT-5<br/>Master Coordinator]
+    end
+    
+    subgraph "Specialized Delegate Agents"
+        RESEARCH[🔍 ResearchAgent<br/>Claude-4-Opus<br/>Deep Research & Analysis]
+        PLANNING[📋 PlanningAgent<br/>GPT-4o<br/>Itinerary Optimization]
+        LOCATION[📍 LocationAgent<br/>Claude-4-Sonnet<br/>Geographic Intelligence]
+        TIMING[⏰ TimingAgent<br/>Claude-4-Sonnet<br/>Temporal Optimization]
+        ANALYSIS[📊 AnalysisAgent<br/>GPT-5<br/>Data Synthesis]
+    end
+    
+    subgraph "Tool Layer"
+        MAPS[🗺️ Google Maps Tools]
+        WEATHER[🌤️ Weather Tools]
+        SEARCH[🔍 Web Search Tools]
+        GEO[📍 Geocoding Tools]
+    end
+    
+    MAIN --> RESEARCH
+    MAIN --> PLANNING
+    MAIN --> LOCATION
+    MAIN --> TIMING
+    MAIN --> ANALYSIS
+    
+    RESEARCH --> SEARCH
+    PLANNING --> MAPS
+    LOCATION --> GEO
+    TIMING --> WEATHER
+    ANALYSIS --> MAPS
+    
+    RESEARCH -.-> PLANNING
+    PLANNING -.-> LOCATION
+    LOCATION -.-> TIMING
+    TIMING -.-> ANALYSIS
+```
+
+### **Agent Communication Flow**
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant MainAgent as TravelAgent (GPT-5)
+    participant ResearchAgent as ResearchAgent (Claude-4-Opus)
+    participant PlanningAgent as PlanningAgent (GPT-4o)
+    participant LocationAgent as LocationAgent (Claude-4-Sonnet)
+    participant TimingAgent as TimingAgent (Claude-4-Sonnet)
+    
+    User->>MainAgent: "Plan a 5-day trip to Tokyo"
+    
+    MainAgent->>ResearchAgent: research_destination("Tokyo", requirements)
+    ResearchAgent->>MainAgent: {attractions, culture, recommendations}
+    
+    MainAgent->>LocationAgent: analyze_locations(tokyo_data, preferences)
+    LocationAgent->>MainAgent: {districts, proximities, accessibility}
+    
+    MainAgent->>TimingAgent: optimize_timing(itinerary_draft, weather, events)
+    TimingAgent->>MainAgent: {optimized_schedule, alternatives}
+    
+    MainAgent->>PlanningAgent: create_detailed_plan(research, locations, timing)
+    PlanningAgent->>MainAgent: {detailed_itinerary, logistics}
+    
+    MainAgent->>User: "Complete 5-day Tokyo itinerary with multi-agent insights"
+```
+
+---
+
+## 🔧 **Implementation Architecture**
+
+### **Enhanced Agent Structure**
+
+```python
+# Main Travel Agent (existing enhanced)
+class TravelAgent:
+    def __init__(self):
+        self.main_agent = Agent(
+            model='gpt-5-2025-08-07',
+            system_prompt=MAIN_COORDINATOR_PROMPT
+        )
+        self.delegate_agents = self._initialize_delegate_agents()
+        self._register_delegation_tools()
+    
+    def _initialize_delegate_agents(self):
+        return {
+            'research': ResearchAgent('claude-opus-4-20250514'),
+            'planning': PlanningAgent('openai:gpt-4o'), 
+            'location': LocationAgent('anthropic:claude-sonnet-4-20250514'),
+            'timing': TimingAgent('anthropic:claude-sonnet-4-20250514'),
+            'analysis': AnalysisAgent('gpt-5-2025-08-07')
+        }
+```
+
+### **Delegate Agent Implementations**
+
+#### **1. Research Agent (Claude-4-Opus)**
+```python
+class ResearchAgent:
+    def __init__(self, model='claude-opus-4-20250514'):
+        self.agent = Agent(
+            model=model,
+            system_prompt="""You are a travel research specialist. Provide 
+            comprehensive destination analysis including attractions, culture, 
+            practical information, and unique insights."""
+        )
+        register_tools(self.agent)  # Inherits web search tools
+
+    @property  
+    def capabilities(self):
+        return [
+            "destination_research",
+            "cultural_analysis", 
+            "attraction_discovery",
+            "local_insights_generation"
+        ]
+```
+
+#### **2. Planning Agent (GPT-4o)**
+```python
+class PlanningAgent:
+    def __init__(self, model='openai:gpt-4o'):
+        self.agent = Agent(
+            model=model,
+            system_prompt="""You are an itinerary optimization specialist. 
+            Create detailed, efficient travel plans with perfect timing and 
+            logical flow."""
+        )
+        register_tools(self.agent)  # Inherits directions, geocoding tools
+        
+    @property
+    def capabilities(self):
+        return [
+            "itinerary_optimization",
+            "route_planning",
+            "logistics_coordination", 
+            "schedule_optimization"
+        ]
+```
+
+#### **3. Location Agent (Claude-4-Sonnet)**
+```python
+class LocationAgent:
+    def __init__(self, model='anthropic:claude-sonnet-4-20250514'):
+        self.agent = Agent(
+            model=model,
+            system_prompt="""You are a geographic intelligence specialist.
+            Analyze locations, proximities, neighborhoods, and spatial 
+            relationships for optimal travel planning."""
+        )
+        register_tools(self.agent)  # Inherits geocoding, maps tools
+        
+    @property
+    def capabilities(self):
+        return [
+            "geographic_analysis",
+            "proximity_optimization",
+            "neighborhood_assessment",
+            "accessibility_evaluation"
+        ]
+```
+
+#### **4. Timing Agent (Claude-4-Sonnet)**
+```python
+class TimingAgent:
+    def __init__(self, model='anthropic:claude-sonnet-4-20250514'):
+        self.agent = Agent(
+            model=model,
+            system_prompt="""You are a temporal optimization specialist.
+            Analyze timing, weather, events, and seasonal factors for 
+            optimal travel scheduling.""" 
+        )
+        register_tools(self.agent)  # Inherits weather, datetime tools
+        
+    @property
+    def capabilities(self):
+        return [
+            "temporal_optimization", 
+            "weather_analysis",
+            "event_correlation",
+            "seasonal_planning"
+        ]
+```
+
+### **Agent Delegation Tools**
+
+```python
+@main_agent.tool
+async def delegate_research(ctx: RunContext, destination: str, requirements: dict) -> dict:
+    """Delegate comprehensive destination research to research specialist."""
+    research_agent = ctx.deps.delegate_agents['research']
+    
+    result = await research_agent.agent.run(
+        f"Research {destination} for travel planning: {requirements}",
+        deps=ctx.deps,
+        usage=ctx.usage
+    )
+    return result.output
+
+@main_agent.tool  
+async def delegate_planning(ctx: RunContext, research_data: dict, preferences: dict) -> dict:
+    """Delegate detailed itinerary planning to planning specialist."""
+    planning_agent = ctx.deps.delegate_agents['planning']
+    
+    result = await planning_agent.agent.run(
+        f"Create detailed itinerary from research: {research_data} with preferences: {preferences}",
+        deps=ctx.deps,
+        usage=ctx.usage
+    )
+    return result.output
+
+@main_agent.tool
+async def delegate_location_analysis(ctx: RunContext, locations: list, criteria: dict) -> dict:
+    """Delegate location analysis to geographic intelligence specialist.""" 
+    location_agent = ctx.deps.delegate_agents['location']
+    
+    result = await location_agent.agent.run(
+        f"Analyze locations {locations} with criteria: {criteria}",
+        deps=ctx.deps,
+        usage=ctx.usage  
+    )
+    return result.output
+```
+
+---
+
+## 📊 **Multi-Agent Orchestration Patterns**
+
+### **Pattern 1: Sequential Agent Hand-off**
+```python
+async def sequential_planning_workflow(self, query: str, preferences: dict):
+    """Sequential multi-agent workflow for comprehensive planning."""
+    
+    # Step 1: Research Phase
+    research_result = await self.delegate_agents['research'].agent.run(
+        f"Research destinations for: {query}",
+        deps=self.deps,
+        usage=self.usage
+    )
+    
+    # Step 2: Location Analysis Phase  
+    location_result = await self.delegate_agents['location'].agent.run(
+        f"Analyze locations from research: {research_result.output}",
+        deps=self.deps,
+        usage=self.usage
+    )
+    
+    # Step 3: Timing Optimization Phase
+    timing_result = await self.delegate_agents['timing'].agent.run(
+        f"Optimize timing for: {location_result.output}",
+        deps=self.deps, 
+        usage=self.usage
+    )
+    
+    # Step 4: Final Planning Phase
+    final_plan = await self.delegate_agents['planning'].agent.run(
+        f"Create final itinerary from: {timing_result.output}",
+        deps=self.deps,
+        usage=self.usage
+    )
+    
+    return final_plan.output
+```
+
+### **Pattern 2: Parallel Agent Delegation**
+```python
+async def parallel_analysis_workflow(self, query: str):
+    """Parallel multi-agent analysis for faster processing."""
+    
+    # Launch all agents in parallel
+    tasks = [
+        self.delegate_agents['research'].agent.run(f"Research: {query}", deps=self.deps),
+        self.delegate_agents['location'].agent.run(f"Location analysis: {query}", deps=self.deps),
+        self.delegate_agents['timing'].agent.run(f"Timing analysis: {query}", deps=self.deps)
+    ]
+    
+    results = await asyncio.gather(*tasks)
+    
+    # Synthesize results
+    synthesis = await self.delegate_agents['analysis'].agent.run(
+        f"Synthesize parallel analysis results: {[r.output for r in results]}",
+        deps=self.deps,
+        usage=self.usage
+    )
+    
+    return synthesis.output
+```
+
+---
+
+## 🖥️ **UI Enhancements for Multi-Agent Support**
+
+### **Enhanced Dashboard with Agent Visualization**
+
+```mermaid
+graph TB
+    subgraph "Enhanced UI Components"
+        HEADER[📱 Enhanced Header with Agent Status]
+        AGENT_PANEL[🤖 Active Agents Panel]
+        MAIN_CONTENT[🖥️ Main Content with Multi-Agent Results]
+        AGENT_TRACE[📊 Agent Execution Trace Viewer]
+    end
+    
+    subgraph "Agent Status Indicators"
+        MAIN_STATUS[🎯 Main Agent Status]
+        RESEARCH_STATUS[🔍 Research Agent Status] 
+        PLANNING_STATUS[📋 Planning Agent Status]
+        LOCATION_STATUS[📍 Location Agent Status]
+        TIMING_STATUS[⏰ Timing Agent Status]
+    end
+    
+    subgraph "Multi-Agent Results Display"
+        TABBED_RESULTS[📑 Tabbed Agent Results]
+        SYNTHESIS_VIEW[🔄 Synthesis View]
+        AGENT_COMPARISON[⚖️ Agent Response Comparison]
+        EXECUTION_FLOW[🌊 Execution Flow Visualization]
+    end
+    
+    HEADER --> AGENT_PANEL
+    AGENT_PANEL --> MAIN_STATUS
+    AGENT_PANEL --> RESEARCH_STATUS
+    AGENT_PANEL --> PLANNING_STATUS
+    AGENT_PANEL --> LOCATION_STATUS
+    AGENT_PANEL --> TIMING_STATUS
+    
+    MAIN_CONTENT --> TABBED_RESULTS
+    MAIN_CONTENT --> SYNTHESIS_VIEW
+    MAIN_CONTENT --> AGENT_COMPARISON
+    
+    AGENT_TRACE --> EXECUTION_FLOW
+```
+
+### **New UI Components**
+
+#### **1. Agent Status Panel**
+- Real-time status of each active agent
+- Progress indicators for long-running delegations
+- Agent communication flow visualization
+- LLM usage tracking per agent
+
+#### **2. Multi-Agent Results Tabs**
+- Separate tab for each agent's specialized output
+- Combined synthesis view from main coordinator
+- Agent comparison and conflict resolution display
+- Usage statistics per agent and model
+
+#### **3. Agent Execution Trace**
+- Enhanced trace viewer showing multi-agent interactions
+- Agent delegation chains and hand-off patterns
+- Inter-agent communication logs
+- Performance metrics per agent and LLM model
+
+---
+
+## ⏱️ **3-Week Implementation Plan**
+
+### **Week 1: Multi-Agent Foundation**
+**Focus**: Core multi-agent architecture and delegation patterns
+
+#### **Days 1-3: Agent Infrastructure**
+- Enhance existing `TravelAgent` class to support delegation
+- Implement base `DelegateAgent` class structure
+- Create agent registration and management system
+- Build agent communication protocols
+
+#### **Days 4-5: First Delegate Agents**
+- Implement `ResearchAgent` (Claude-4-Sonnet)
+- Implement `LocationAgent` (Gemini-1.5-Flash)
+- Create delegation tools for research and location analysis
+- Test basic agent delegation patterns
+
+#### **Days 6-7: UI Multi-Agent Support**
+- Add agent status panel to existing UI
+- Implement real-time agent status updates
+- Create multi-agent results display tabs
+- Test UI with basic multi-agent workflows
+
+**Week 1 Deliverables**:
+- Enhanced `TravelAgent` with delegation capabilities
+- 2 functional delegate agents with different LLMs
+- Updated UI supporting multi-agent visualization
+- Basic delegation and hand-off patterns working
+
+### **Week 2: Complete Multi-Agent System**
+**Focus**: All delegate agents and orchestration patterns
+
+#### **Days 8-10: Remaining Delegate Agents**
+- Implement `PlanningAgent` (GPT-4o)
+- Implement `TimingAgent` (Claude-4-Sonnet)
+- Implement `AnalysisAgent` (GPT-4o)
+- Create all delegation tools and communication protocols
+
+#### **Days 11-12: Orchestration Patterns**
+- Implement sequential agent hand-off workflows
+- Implement parallel agent delegation patterns
+- Build agent result synthesis and conflict resolution
+- Create comprehensive usage tracking across all agents
+
+#### **Days 13-14: Enhanced UI Features**
+- Complete agent execution trace viewer
+- Implement agent comparison and synthesis views
+- Add performance metrics and usage statistics
+- Build agent communication flow visualization
+
+**Week 2 Deliverables**:
+- Complete 5-agent delegation system
+- Sequential and parallel orchestration patterns
+- Full multi-agent UI with trace visualization
+- Performance monitoring and usage tracking
+
+### **Week 3: Trace Analysis & Production Polish**
+**Focus**: Advanced trace analysis and system optimization
+
+#### **Days 15-17: Multi-Agent Trace Analysis**
+- Enhance existing causal analysis for multi-agent traces
+- Build agent influence chain analysis
+- Create multi-agent performance comparison tools
+- Implement advanced trace search and filtering
+
+#### **Days 18-19: System Optimization**
+- Performance optimization for multi-agent workflows
+- Error handling and retry mechanisms for agent failures
+- Usage limit management across multiple LLMs
+- Advanced caching for agent delegation results
+
+#### **Days 20-21: Production Readiness**
+- Comprehensive testing of all multi-agent patterns
+- Documentation and deployment preparation
+- Load testing with concurrent multi-agent workflows
+- Final bug fixes and performance tuning
+
+**Week 3 Deliverables**:
+- Advanced multi-agent trace analysis capabilities
+- Production-optimized multi-agent system
+- Complete documentation and deployment guides
+- Scalable system supporting multiple LLM providers
+
+---
+
+## 🔧 **Technical Implementation Details**
+
+### **LLM Selection Rationale**
+- **GPT-5**: Most advanced model for coordination, synthesis, and complex reasoning tasks
+- **Claude-4-Opus**: Most capable Claude model for deep research and comprehensive analysis
+- **GPT-4o**: Proven model for structured planning and optimization tasks
+- **Claude-4-Sonnet**: Fast and efficient for analytical and processing tasks
+
+### **Multi-LLM Configuration**
+```python
+AGENT_MODELS = {
+    'main': 'gpt-5-2025-08-07',           # Advanced coordination and synthesis
+    'research': 'claude-opus-4-20250514',  # Deep research and analysis
+    'planning': 'openai:gpt-4o',        # Complex planning and optimization
+    'location': 'anthropic:claude-sonnet-4-20250514',   # Geographic analysis
+    'timing': 'anthropic:claude-sonnet-4-20250514',   # Temporal optimization
+    'analysis': 'gpt-5-2025-08-07'         # Advanced data synthesis
+}
+```
+
+### **Usage Tracking Across Agents**
+```python
+async def run_with_multi_agent_tracking(self, query: str):
+    """Run query with comprehensive multi-agent usage tracking."""
+    usage = RunUsage()
+    
+    # Main agent coordinates and delegates
+    result = await self.main_agent.run(
+        query, 
+        deps=self.deps,
+        usage=usage  # Accumulates across all delegations
+    )
+    
+    return {
+        'output': result.output,
+        'usage': usage,  # Total usage across all agents/models
+        'agent_breakdown': self._get_usage_by_agent(usage)
+    }
+```
+
+### **Agent Communication Protocol**
+```python
+class AgentMessage:
+    source_agent: str
+    target_agent: str
+    message_type: str  # 'delegation', 'result', 'status'
+    payload: dict
+    timestamp: float
+    usage_impact: RunUsage
+```
+
+---
+
+## 📈 **Success Metrics**
+
+### **Multi-Agent Performance**
+- **Delegation Success Rate**: 99%+ successful agent delegations
+- **Response Quality**: Improved response quality through specialist agents
+- **LLM Usage Optimization**: Efficient model selection per task type
+- **Agent Coordination**: < 2% failed inter-agent communications
+
+### **System Performance**
+- **Multi-Agent Response Time**: < 45 seconds for complete workflows
+- **UI Responsiveness**: Real-time agent status updates < 1 second
+- **Trace Analysis**: Advanced multi-agent trace analysis capabilities
+- **Concurrent Workflows**: Support 50+ parallel multi-agent workflows
+
+### **Week Targets**
+- **Week 1**: Basic 2-agent delegation working (100%)
+- **Week 2**: Complete 5-agent system operational (100%) 
+- **Week 3**: Advanced trace analysis and production readiness (100%)
+
+---
+
+## 🚨 **Risk Mitigation**
+
+### **Multi-Agent Risks**
+**Risk**: Agent delegation failures disrupting workflows
+**Mitigation**: Implement fallback to main agent, retry mechanisms, graceful degradation
+
+**Risk**: LLM rate limits affecting multi-agent performance  
+**Mitigation**: Smart rate limiting, request queuing, usage monitoring per model
+
+**Risk**: Complex agent coordination introducing bugs
+**Mitigation**: Comprehensive testing, staged rollout, monitoring and alerting
+
+---
+
+## 📋 **Final Deliverables**
+
+### **Enhanced System Components**
+1. **Multi-Agent Travel System**: Enhanced app.py with 5 delegate agents using 4 different LLMs
+2. **Multi-LLM Integration**: GPT-5, GPT-4o, Claude-4-Opus, and Claude-4-Sonnet support
+3. **Advanced UI**: Multi-agent visualization and trace analysis  
+4. **Agent Orchestration**: Sequential and parallel delegation patterns
+5. **Usage Tracking**: Comprehensive tracking across all agents and models
+6. **Trace Analysis**: Enhanced multi-agent execution analysis
+7. **Production Deployment**: Scalable, monitored multi-agent system
+
+### **System Architecture**
+- Enhanced existing Travel Agent as main coordinator
+- 5 specialized delegate agents using optimal LLMs for each task
+- Agent delegation and hand-off patterns from PydanticAI docs
+- Advanced trace analysis as secondary capability
+- Production-ready deployment with monitoring
+
+---
+
+**Document Status**: Draft v1.0  
+**Implementation Start**: Week of August 26, 2025  
+**Target Completion**: September 16, 2025
+
+---
+
+*This PRD enhances the existing Travel Agent system with multi-agent capabilities using PydanticAI patterns, different LLMs for specialized tasks, and advanced trace analysis features.*
